@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Configuration ---
     // These placeholders will be replaced by your GitHub Actions deploy.yml workflow.
-    const n8nChatUrl = '%%CHAT_URL%%';
-    const n8nRefreshUrl = '%%REFRESH_URL%%';
+    const n8nChatUrl = 'https://n8n.shibampokhrel.com/webhook/5a073891-2aac-45a1-b7c0-5e33b6efaf67/chat';
+    const n8nRefreshUrl = 'https://n8n.shibampokhrel.com/webhook/21c8582e-6325-4fee-8e8d-43f658858d19';
 
     // =================================================================
     // 3. CORE FUNCTIONS (CHAT AND REFRESH)
