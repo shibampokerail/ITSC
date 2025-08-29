@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('error-message');
 
     // IMPORTANT: Get this from your GitHub secrets/build process
-    const n8nTestUrl = '%%N8N_CHAT_URL%%'; 
+    const n8nTestUrl = '%%CHAT_URL%%'; 
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
