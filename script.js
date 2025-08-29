@@ -1,5 +1,19 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Element Selections ---
+    // =================================================================
+    // 1. AUTHENTICATION GATE
+    // =================================================================
+    const storedCredentials = sessionStorage.getItem('n8nCredentials');
+
+    // If no credentials are found in sessionStorage, redirect to the login page.
+    // This effectively protects the chat page from direct access.
+    if (!storedCredentials) {
+        window.location.href = 'login.html';
+        return; // Stop executing the rest of the script immediately.
+    }
+
+    // =================================================================
+    // 2. ELEMENT SELECTIONS & CONFIGURATION
+    // =================================================================
     const userInput = document.getElementById('userInput');
     const sendBtn = document.getElementById('sendBtn');
     const refreshBtn = document.getElementById('refreshBtn');
@@ -7,14 +21,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const loaderOverlay = document.getElementById('loader-overlay');
 
     // --- Configuration ---
-    const n8nChatUrl = ''; // <-- IMPORTANT: REPLACE WITH YOUR CHAT URL
-    const n8nRefreshUrl = ''; // <-- IMPORTANT: ADD YOUR REFRESH URL
-    const username = '';
-    const password = '';
+    // These placeholders will be replaced by your GitHub Actions deploy.yml workflow.
+    const n8nChatUrl = '%%CHAT_URL%%';
+    const n8nRefreshUrl = '%%REFRESH_URL%%';
 
     // =================================================================
-    // CHAT MESSAGE HANDLING
+    // 3. CORE FUNCTIONS (CHAT AND REFRESH)
     // =================================================================
+
+    /**
+     * Handles the "Refresh Knowledgebase" button click.
+     * Shows a full-page loader and calls the refresh webhook.
+     */
+    const handleRefresh = async () => {
+        loaderOverlay.style.display = 'flex'; // Show loader and "freeze" page
+        
+        try {
+            const response = await fetch(n8nRefreshUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Basic ${storedCredentials}` // Use stored credentials
+                },
+                body: JSON.stringify({ action: 'refresh_knowledgebase', timestamp: new Date().toISOString() })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+
+            showNotification('Knowledgebase refresh has been initiated. This may take a few minutes.', 'success');
+
+        } catch (error) {
+            console.error('Failed to initiate knowledgebase refresh:', error);
+            showNotification('Failed to start the refresh process. Please check the console.', 'error');
+        } finally {
+            loaderOverlay.style.display = 'none'; // Always hide loader and "unfreeze" page
+        }
+    };
+
+    /**
+     * Handles sending a user's message to the chat webhook.
+     */
     const handleSendMessage = async () => {
         const messageText = userInput.value.trim();
         if (messageText === '') return;
@@ -28,12 +76,31 @@ document.addEventListener('DOMContentLoaded', () => {
         appendThinkingAnimation();
 
         try {
-            const botReply = await sendToN8nChat(messageText);
+            const response = await fetch(n8nChatUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Basic ${storedCredentials}` // Use stored credentials
+                },
+                body: JSON.stringify({
+                    message: messageText,
+                    source: 'web-chatbot',
+                    timestamp: new Date().toISOString()
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+
+            const responseData = await response.json();
             removeThinkingAnimation();
-            appendMessage(botReply, 'bot-message');
+            appendMessage(responseData.output || 'Sorry, I received an empty response.', 'bot-message');
+
         } catch (error) {
+            console.error('Error sending message:', error);
             removeThinkingAnimation();
-            appendMessage('Sorry, an error occurred. Please try again.', 'bot-message');
+            appendMessage('Sorry, an error occurred while trying to get a response. Please try again.', 'bot-message');
         } finally {
             userInput.disabled = false;
             sendBtn.disabled = false;
@@ -41,59 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    async function sendToN8nChat(message) {
-        const credentials = btoa(`${username}:${password}`);
-        try {
-            const response = await fetch(n8nChatUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${credentials}` },
-                body: JSON.stringify({ message: message, source: 'web-chatbot', timestamp: new Date().toISOString() })
-            });
-            if (!response.ok) {
-                console.error('Failed to send message to n8n:', response.statusText);
-                return 'Sorry, there was a problem connecting to the server.';
-            }
-            const responseData = await response.json();
-            return responseData.output || 'I received your message but got no response.';
-        } catch (error) {
-            console.error('Error sending message:', error);
-            throw error;
-        }
-    }
-
     // =================================================================
-    // KNOWLEDGEBASE REFRESH HANDLING
-    // =================================================================
-    const handleRefresh = async () => {
-        loaderOverlay.style.display = 'flex'; // Show loader and "freeze" page
-        
-        try {
-            const response = await fetch(n8nRefreshUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${btoa(`${username}:${password}`)}` },
-                body: JSON.stringify({ action: 'refresh_knowledgebase', timestamp: new Date().toISOString() })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Server responded with status: ${response.status}`);
-            }
-            
-            // Optional: Check response from n8n if needed
-            // const result = await response.json();
-            // console.log('Refresh successful:', result);
-
-            showNotification('Knowledgebase refresh completed successfully!', 'success');
-
-        } catch (error) {
-            console.error('Failed to refresh knowledgebase:', error);
-            showNotification('Failed to refresh knowledgebase. Please check the console.', 'error');
-        } finally {
-            loaderOverlay.style.display = 'none'; // Always hide loader and "unfreeze" page
-        }
-    };
-
-    // =================================================================
-    // UI HELPER FUNCTIONS
+    // 4. UI HELPER FUNCTIONS
     // =================================================================
 
     function appendMessage(text, className) {
@@ -102,10 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const contentDiv = document.createElement('div');
         contentDiv.classList.add('message-content');
         if (className === 'bot-message') {
-            contentDiv.innerHTML = marked.parse(text);
+            contentDiv.innerHTML = marked.parse(text); // Render markdown for bot
         } else {
             const p = document.createElement('p');
-            p.textContent = text;
+            p.textContent = text; // Use textContent for user messages to prevent XSS
             contentDiv.appendChild(p);
         }
         messageDiv.appendChild(contentDiv);
@@ -119,15 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
         notification.textContent = message;
         messagesContainer.appendChild(notification);
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-        // Automatically remove the notification after 5 seconds
-        setTimeout(() => {
-            notification.remove();
-        }, 5000);
+        setTimeout(() => { notification.remove(); }, 5000);
     }
 
     function appendThinkingAnimation() {
-        // Implementation from previous step
         const thinkingDiv = document.createElement('div');
         thinkingDiv.classList.add('message', 'bot-message', 'thinking-animation');
         thinkingDiv.innerHTML = `<div class="message-content"><span class="dot dot1"></span><span class="dot dot2"></span><span class="dot dot3"></span></div>`;
@@ -136,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function removeThinkingAnimation() {
-        // Implementation from previous step
         const thinkingMessage = document.querySelector('.thinking-animation');
         if (thinkingMessage) thinkingMessage.remove();
     }
@@ -147,15 +157,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // EVENT LISTENERS
+    // 5. EVENT LISTENERS
     // =================================================================
     sendBtn.addEventListener('click', handleSendMessage);
+    refreshBtn.addEventListener('click', handleRefresh);
+    userInput.addEventListener('input', autoResizeTextarea);
+
     userInput.addEventListener('keydown', (e) => {
+        // Send message on Enter key, but allow new lines with Shift+Enter
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
         }
     });
-    userInput.addEventListener('input', autoResizeTextarea);
-    refreshBtn.addEventListener('click', handleRefresh);
 });
