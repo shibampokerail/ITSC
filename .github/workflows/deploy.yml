@@ -22,13 +22,7 @@ jobs:
 
       # 2. Replace placeholders with secrets
       # This step securely accesses your GitHub secrets and replaces the placeholders
-      # in the script.js file. The `sed` command is used for find-and-replace.
-      - name: Inject secrets into JavaScript
-        run: |
-          sed -i "s|%%CHAT_URL%%|${{ secrets.CHAT_URL }}|g" script.js
-          sed -i "s|%%REFRESH_URL%%|${{ secrets.KNOWLEDGEBASE_URL }}|g" script.js
-          # DANGER: The following line will expose your password publicly.
-          sed -i "s|%%PASSWORD%%|${{ secrets.PASSWORD }}|g" script.js
+      # in the script.js file. The `sed` command is used for find-and-replace
 
         # NOTE: We are using the secrets named CHAT_URL and KNOWLEDGEBASE_URL from your screenshot
 
