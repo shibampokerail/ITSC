@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - TSU ITSC Chatbot</title>
+    <link rel="stylesheet" href="style.css"> <!-- We can reuse the main style for consistency -->
+    <link rel="stylesheet" href="login.css"> <!-- Specific styles for the login form -->
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <h1>TSU ITSC Chatbot</h1>
+            <p>Please log in to continue</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" value="ITSC" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" id="login-button">Login</button>
+                <p id="error-message" class="error-message"></p>
+            </form>
+        </div>
+    </div>
+    <script src="login.js"></script>
+</body>
+</html>
