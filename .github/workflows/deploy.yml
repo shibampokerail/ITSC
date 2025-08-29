@@ -1,0 +1,53 @@
+name: Build and Deploy Chatbot
+
+# Run this workflow on pushes to the main branch
+on:
+  push:
+    branches:
+      - main
+
+# Allow this job to create a GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Get the code from your repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Replace placeholders with secrets
+      # This step securely accesses your GitHub secrets and replaces the placeholders
+      # in the script.js file. The `sed` command is used for find-and-replace.
+      - name: Inject secrets into JavaScript
+        run: |
+          sed -i "s|%%N8N_CHAT_URL%%|${{ secrets.CHAT_URL }}|g" script.js
+          sed -i "s|%%N8N_REFRESH_URL%%|${{ secrets.KNOWLEDGEBASE_URL }}|g" script.js
+        # NOTE: We are using the secrets named CHAT_URL and KNOWLEDGEBASE_URL from your screenshot
+
+      # 3. Prepare the files for deployment
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      # 4. Upload the modified files as a deployable artifact
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.' # Upload the entire root directory
+
+  deploy:
+    # This job needs the 'build' job to finish first
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # 5. Deploy the artifact to GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
