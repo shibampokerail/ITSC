@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('error-message');
 
     // IMPORTANT: Get this from your GitHub secrets/build process
-    const n8nTestUrl = '%%CHAT_URL%%'; 
+    const n8nTestUrl = 'https://n8n.shibampokhrel.com/webhook/5a073891-2aac-45a1-b7c0-5e33b6efaf67/chat'; 
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
